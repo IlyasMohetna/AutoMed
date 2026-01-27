@@ -95,6 +95,7 @@ public:
                 config.capaciteSalleReveil = body.value("capaciteSalleReveil", 20);
                 config.tauxArriveeHoraireUrgences = body.value("tauxArriveeHoraireUrgences", 2.0);
                 config.nombrePatientsElectifs = body.value("nombrePatientsElectifs", 10);
+                config.facteurVitesse = body.value("facteurVitesse", 0.0);
                 
                 int simId = simulationManager->creerSimulation(config);
                 

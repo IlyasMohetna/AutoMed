@@ -7,6 +7,8 @@
 #include <map>
 #include <ctime>
 #include <iostream>
+#include <thread>
+#include <chrono>
 #include <nlohmann/json.hpp>
 
 #include "../models/Patient.hpp"
@@ -36,6 +38,7 @@ struct ConfigSimulation {
     int capaciteSalleReveil;
     double tauxArriveeHoraireUrgences;
     int nombrePatientsElectifs;
+    double facteurVitesse;  // Facteur de vitesse: 0.0 = instantané, 1.0 = temps réel, 60.0 = 1 min virtuel = 1 sec réel
 
     ConfigSimulation()
         : nom("Simulation"),
@@ -46,7 +49,8 @@ struct ConfigSimulation {
           capaciteSalleAttente(50),
           capaciteSalleReveil(20),
           tauxArriveeHoraireUrgences(2.0),
-          nombrePatientsElectifs(10) {}
+          nombrePatientsElectifs(10),
+          facteurVitesse(0.0) {}  // Par défaut: instantané (compatibilité)
 };
 
 /**
@@ -58,9 +62,11 @@ private:
     std::string nom;
     time_t tempsSimulation;                           // Horloge virtuelle
     time_t tempsDebutReel;                            // Timestamp réel du démarrage
+    time_t dernierTempsSimulation;                    // Dernier temps virtuel (pour calcul delta)
     EtatSimulation etat;
     AlgorithmeOrdonnancement algorithme;
     int dureeSimulationMinutes;
+    double facteurVitesse;                            // Facteur de vitesse de simulation
     
     // File d'événements (priority_queue)
     std::priority_queue<Evenement> fileEvenements;
@@ -92,9 +98,11 @@ public:
           nom(config.nom),
           tempsSimulation(std::time(nullptr)),
           tempsDebutReel(0),
+          dernierTempsSimulation(0),
           etat(EtatSimulation::CREATED),
           algorithme(config.algorithme),
-          dureeSimulationMinutes(config.dureeSimulationMinutes) {
+          dureeSimulationMinutes(config.dureeSimulationMinutes),
+          facteurVitesse(config.facteurVitesse) {
         
         // Créer les composants
         salleAttente = new SalleAttente(1, "Salle d'attente principale", config.capaciteSalleAttente);
@@ -183,10 +191,19 @@ public:
         
         etat = EtatSimulation::RUNNING;
         tempsDebutReel = std::time(nullptr);
+        dernierTempsSimulation = tempsSimulation;  // Initialiser pour le premier événement
         stats->demarrer(tempsSimulation);
         
         std::cout << "\n[SIMULATION] ===== DÉMARRAGE DE LA SIMULATION =====" << std::endl;
         std::cout << "[SIMULATION] Horloge virtuelle: " << tempsSimulation << std::endl;
+        std::cout << "[SIMULATION] Facteur vitesse: ";
+        if (facteurVitesse == 0.0) {
+            std::cout << "INSTANTANÉ" << std::endl;
+        } else if (facteurVitesse == 1.0) {
+            std::cout << "TEMPS RÉEL (1:1)" << std::endl;
+        } else {
+            std::cout << facteurVitesse << "x (1 min virtuel = " << (60.0 / facteurVitesse) << " sec réel)" << std::endl;
+        }
         
         // Traiter tous les événements
         while (etat == EtatSimulation::RUNNING && !fileEvenements.empty()) {
@@ -213,7 +230,24 @@ public:
         Evenement evt = fileEvenements.top();
         fileEvenements.pop();
         
+        // Calculer le délai réel si facteurVitesse > 0
+        if (facteurVitesse > 0.0 && dernierTempsSimulation > 0) {
+            time_t deltaVirtuel = evt.horodatage - dernierTempsSimulation;
+            if (deltaVirtuel > 0) {
+                // Calculer le délai réel en millisecondes
+                // facteurVitesse = 1.0  -> temps réel (1 sec virtuel = 1 sec réel)
+                // facteurVitesse = 60.0 -> 1 min virtuel = 1 sec réel
+                double delaiReelSecondes = static_cast<double>(deltaVirtuel) / facteurVitesse;
+                int delaiReelMs = static_cast<int>(delaiReelSecondes * 1000.0);
+                
+                if (delaiReelMs > 0) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(delaiReelMs));
+                }
+            }
+        }
+        
         // Avancer l'horloge virtuelle
+        dernierTempsSimulation = tempsSimulation;
         tempsSimulation = evt.horodatage;
         
         // Afficher l'événement
@@ -597,6 +631,25 @@ public:
     int getId() const { return id; }
     std::string getNom() const { return nom; }
     EtatSimulation getEtat() const { return etat; }
+    double getFacteurVitesse() const { return facteurVitesse; }
+    
+    // Setters pour contrôle dynamique
+    void setFacteurVitesse(double facteur) {
+        facteurVitesse = facteur;
+        std::cout << "[SIMULATION] Facteur vitesse changé: ";
+        if (facteurVitesse == 0.0) {
+            std::cout << "INSTANTANÉ" << std::endl;
+        } else if (facteurVitesse == 1.0) {
+            std::cout << "TEMPS RÉEL" << std::endl;
+        } else {
+            std::cout << facteurVitesse << "x" << std::endl;
+        }
+    }
+    
+    void setModeInstantane() { setFacteurVitesse(0.0); }
+    void setModeTempsReel() { setFacteurVitesse(1.0); }
+    void setModeRapide() { setFacteurVitesse(60.0); }     // 1 min = 1 sec
+    void setModeTresRapide() { setFacteurVitesse(600.0); } // 1 min = 0.1 sec
 };
 
 } // namespace AutoMed
