@@ -1,13 +1,24 @@
 import { useState, useEffect } from "react";
 import ApiService from "./services/ApiService";
+import Header from "./components/Header";
+import ConnectionAlert from "./components/ConnectionAlert";
+import SimulationsHeader from "./components/SimulationsHeader";
+import EmptyState from "./components/EmptyState";
+import SimulationsList from "./components/SimulationsList";
+import SimulationForm from "./components/SimulationForm";
+import SimulationDetails from "./components/SimulationDetails";
+import Modal from "./components/ui/Modal";
+import Notification from "./components/ui/Notification";
 import "./index.css";
 
 function App() {
   const [connected, setConnected] = useState(false);
   const [serverInfo, setServerInfo] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [inputMessage, setInputMessage] = useState("");
-  const [isChecking, setIsChecking] = useState(false);
+  const [simulations, setSimulations] = useState([]);
+  const [simulationStatuses, setSimulationStatuses] = useState({});
+  const [showForm, setShowForm] = useState(false);
+  const [selectedSimulation, setSelectedSimulation] = useState(null);
+  const [notification, setNotification] = useState(null);
 
   useEffect(() => {
     checkHealth();
@@ -15,162 +26,197 @@ function App() {
     return () => clearInterval(healthInterval);
   }, []);
 
+  useEffect(() => {
+    if (connected) {
+      loadSimulations();
+      const simInterval = setInterval(loadSimulations, 3000); // Refresh toutes les 3 secondes
+      return () => clearInterval(simInterval);
+    }
+  }, [connected]);
+
+  useEffect(() => {
+    if (simulations.length > 0) {
+      loadAllStatuses();
+    }
+  }, [simulations]);
+
   const checkHealth = async () => {
     try {
       await ApiService.healthCheck();
       setConnected(true);
-      if (messages.length === 0) {
-        addMessage("✅ Serveur accessible", "system");
-      }
       if (!serverInfo) {
         const info = await ApiService.getInfo();
         setServerInfo(info);
       }
     } catch (error) {
       setConnected(false);
-      if (
-        messages.length === 0 ||
-        messages[messages.length - 1].text !== "❌ Serveur non accessible"
-      ) {
-        addMessage("❌ Serveur non accessible", "error");
+    }
+  };
+
+  const loadSimulations = async () => {
+    try {
+      const data = await ApiService.listSimulations();
+      setSimulations(data.simulations || []);
+    } catch (error) {
+      console.error("Error loading simulations:", error);
+    }
+  };
+
+  const loadAllStatuses = async () => {
+    const statuses = {};
+    for (const simId of simulations) {
+      try {
+        const status = await ApiService.getSimulationStatus(simId);
+        statuses[simId] = status;
+      } catch (error) {
+        console.error(`Error loading status for sim ${simId}:`, error);
       }
     }
+    setSimulationStatuses(statuses);
   };
 
-  const addMessage = (text, type) => {
-    setMessages((prev) => [...prev, { text, type, timestamp: new Date() }]);
+  const showNotification = (message, type = "success") => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
   };
 
-  const sendMessage = async () => {
-    if (!inputMessage.trim() || !connected) return;
-    setIsChecking(true);
+  const handleCreateSimulation = async (config) => {
     try {
-      const response = await ApiService.echo({ message: inputMessage });
-      addMessage(`Envoyé: ${inputMessage}`, "sent");
-      addMessage(`Réponse: ${JSON.stringify(response.received)}`, "received");
-      setInputMessage("");
+      const result = await ApiService.createSimulation(config);
+      showNotification(
+        `Simulation #${result.simulationId} créée avec succès`,
+        "success"
+      );
+      setShowForm(false);
+      loadSimulations();
     } catch (error) {
-      addMessage("⚠️ Erreur d'envoi", "error");
-    } finally {
-      setIsChecking(false);
+      showNotification("Erreur lors de la création de la simulation", "error");
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") sendMessage();
+  const handleStartSimulation = async (simId) => {
+    try {
+      await ApiService.startSimulation(simId);
+      showNotification(`Simulation #${simId} démarrée`, "success");
+      loadSimulations();
+    } catch (error) {
+      showNotification(`Erreur lors du démarrage`, "error");
+    }
+  };
+
+  const handlePauseSimulation = async (simId) => {
+    try {
+      await ApiService.pauseSimulation(simId);
+      showNotification(`Simulation #${simId} mise en pause`, "success");
+      loadSimulations();
+    } catch (error) {
+      showNotification(`Erreur lors de la mise en pause`, "error");
+    }
+  };
+
+  const handleResumeSimulation = async (simId) => {
+    try {
+      await ApiService.resumeSimulation(simId);
+      showNotification(`Simulation #${simId} reprise`, "success");
+      loadSimulations();
+    } catch (error) {
+      showNotification(`Erreur lors de la reprise`, "error");
+    }
+  };
+
+  const handleStopSimulation = async (simId) => {
+    try {
+      await ApiService.stopSimulation(simId);
+      showNotification(`Simulation #${simId} arrêtée`, "success");
+      loadSimulations();
+    } catch (error) {
+      showNotification(`Erreur lors de l'arrêt`, "error");
+    }
+  };
+
+  const handleDeleteSimulation = async (simId) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer la simulation #${simId} ?`)) {
+      return;
+    }
+    try {
+      await ApiService.deleteSimulation(simId);
+      showNotification(`Simulation #${simId} supprimée`, "success");
+      loadSimulations();
+    } catch (error) {
+      showNotification(`Erreur lors de la suppression`, "error");
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <header className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                🏥 AutoMed - Simulateur de Blocs Opératoires
-              </h1>
-              <p className="text-gray-600 mt-1">
-                {serverInfo ? serverInfo.name : "Backend C++ REST API"}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className={`h-3 w-3 rounded-full ${
-                  connected ? "bg-green-500 animate-pulse" : "bg-red-500"
-                }`}
-              ></div>
-              <span
-                className={`font-semibold ${
-                  connected ? "text-green-600" : "text-red-600"
-                }`}
-              >
-                {connected ? "Connecté" : "Déconnecté"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-50">
+      <Header connected={connected} serverInfo={serverInfo} />
+
+      <Notification
+        message={notification?.message}
+        type={notification?.type}
+        onClose={() => setNotification(null)}
+      />
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            🔌 Test de Communication REST API
-          </h2>
+        {!connected && <ConnectionAlert />}
 
-          <div className="bg-gray-50 rounded-lg p-4 h-96 overflow-y-auto mb-4 border border-gray-200">
-            {messages.length === 0 ? (
-              <p className="text-gray-400 text-center mt-20">
-                Aucun message. Envoyez un message pour tester l'API !
-              </p>
-            ) : (
-              messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`mb-3 p-3 rounded-lg ${
-                    msg.type === "sent"
-                      ? "bg-blue-100 ml-auto max-w-md"
-                      : msg.type === "received"
-                      ? "bg-green-100 mr-auto max-w-md"
-                      : msg.type === "system"
-                      ? "bg-gray-200 text-center"
-                      : "bg-red-100 text-center"
-                  }`}
-                >
-                  <p className="text-sm font-medium text-gray-800">
-                    {msg.text}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {msg.timestamp.toLocaleTimeString()}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Tapez un message..."
-              disabled={!connected || isChecking}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+        {connected && (
+          <>
+            <SimulationsHeader
+              simulationsCount={simulations.length}
+              onCreateClick={() => setShowForm(true)}
             />
-            <button
-              onClick={sendMessage}
-              disabled={!connected || !inputMessage.trim() || isChecking}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold transition"
-            >
-              {isChecking ? "Envoi..." : "Envoyer"}
-            </button>
-          </div>
 
-          {!connected && (
-            <p className="text-yellow-600 text-sm mt-3 text-center">
-              ⚠️ En attente de connexion au serveur backend...
-            </p>
-          )}
-        </div>
+            {simulations.length === 0 && !showForm && (
+              <EmptyState onCreateClick={() => setShowForm(true)} />
+            )}
 
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-bold text-blue-900 mb-2">ℹ️ Informations</h3>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>✓ Backend C++ avec REST API (Crow) sur le port 8080</li>
-            <li>✓ Frontend React avec Vite sur le port 3000</li>
-            <li>✓ Communication HTTP avec health check automatique</li>
-            <li>✓ Hot-reload activé sur les deux containers</li>
-          </ul>
-          {serverInfo && (
-            <div className="mt-3 p-2 bg-white rounded border border-blue-300">
-              <p className="text-xs text-blue-700">
-                <strong>Backend:</strong> {serverInfo.name} v
-                {serverInfo.version}
-              </p>
-            </div>
-          )}
-        </div>
+            {simulations.length > 0 && (
+              <SimulationsList
+                simulations={simulations}
+                simulationStatuses={simulationStatuses}
+                onStart={handleStartSimulation}
+                onPause={handlePauseSimulation}
+                onResume={handleResumeSimulation}
+                onStop={handleStopSimulation}
+                onDelete={handleDeleteSimulation}
+                onView={(id) => setSelectedSimulation(id)}
+              />
+            )}
+          </>
+        )}
       </main>
+
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        size="lg"
+      >
+        <SimulationForm
+          onSimulationCreated={handleCreateSimulation}
+          onCancel={() => setShowForm(false)}
+        />
+      </Modal>
+
+      {selectedSimulation && (
+        <SimulationDetails
+          simulationId={selectedSimulation}
+          onClose={() => setSelectedSimulation(null)}
+        />
+      )}
+
+      <footer className="bg-white border-t border-gray-200 mt-12 py-6">
+        <div className="max-w-7xl mx-auto px-4 text-center text-gray-600 text-sm">
+          <p>
+            <span className="font-semibold">AutoMed</span> - Simulateur de Blocs
+            Opératoires avec C++ Backend
+          </p>
+          <p className="mt-1">
+            Backend: {serverInfo?.type || "REST API"} • Frontend: React + Vite +
+            Tailwind CSS
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

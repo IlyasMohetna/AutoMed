@@ -7,21 +7,22 @@
 #include <map>
 #include "../simulation/SimulationManager.hpp"
 #include "../simulation/SimulationEngine.hpp"
+#include <crow/middlewares/cors.h>
 
 using json = nlohmann::json;
 using namespace AutoMed;
 
 class ApiServer {
 private:
-    crow::SimpleApp app;
+    crow::App<crow::CORSHandler> app;
     SimulationManager* simulationManager;
     
-    // Fonction helper pour ajouter les headers CORS
-    crow::response addCORS(crow::response&& res) {
+    // Helper to add CORS headers to any response
+    void addCORSHeaders(crow::response& res) {
         res.add_header("Access-Control-Allow-Origin", "http://localhost:3000");
         res.add_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
         res.add_header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        return std::move(res);
+        res.add_header("Access-Control-Max-Age", "86400");
     }
     
 public:
@@ -34,6 +35,15 @@ public:
     }
     
     void setupRoutes() {
+        // Global OPTIONS handler for CORS preflight requests
+        CROW_ROUTE(app, "/<path>")
+            .methods("OPTIONS"_method)
+        ([this](const crow::request&, std::string) {
+            crow::response res(204);
+            addCORSHeaders(res);
+            return res;
+        });
+        
         // Health check
         CROW_ROUTE(app, "/api/health")
         ([this]() {
@@ -42,7 +52,9 @@ public:
                 {"service", "AutoMed Backend"},
                 {"timestamp", std::time(nullptr)}
             };
-            return addCORS(crow::response(200, response.dump()));
+            crow::response res(200, response.dump());
+            addCORSHeaders(res);
+            return res;
         });
         
         // Info du serveur
@@ -53,7 +65,9 @@ public:
                 {"version", "1.0.0"},
                 {"type", "Backend C++ REST API"}
             };
-            return addCORS(crow::response(200, response.dump()));
+            crow::response res(200, response.dump());
+            addCORSHeaders(res);
+            return res;
         });
         
         // Test echo
@@ -66,13 +80,17 @@ public:
                     {"received", body},
                     {"timestamp", std::time(nullptr)}
                 };
-                return addCORS(crow::response(200, response.dump()));
+                crow::response res(200, response.dump());
+                addCORSHeaders(res);
+                return res;
             } catch (const std::exception& e) {
                 json error = {
                     {"error", "Invalid JSON"},
                     {"message", e.what()}
                 };
-                return addCORS(crow::response(400, error.dump()));
+                crow::response res(400, error.dump());
+                addCORSHeaders(res);
+                return res;
             }
         });
         
@@ -104,14 +122,18 @@ public:
                     {"simulationId", simId},
                     {"message", "Simulation créée avec succès"}
                 };
-                return addCORS(crow::response(200, response.dump()));
+                crow::response res(200, response.dump());
+                addCORSHeaders(res);
+                return res;
             } catch (const std::exception& e) {
                 json error = {
                     {"success", false},
                     {"error", "Erreur lors de la création"},
                     {"message", e.what()}
                 };
-                return addCORS(crow::response(400, error.dump()));
+                crow::response res(400, error.dump());
+                addCORSHeaders(res);
+                return res;
             }
         });
         
@@ -125,13 +147,17 @@ public:
                     {"message", "Simulation démarrée"},
                     {"simulationId", simId}
                 };
-                return addCORS(crow::response(200, response.dump()));
+                crow::response res(200, response.dump());
+                addCORSHeaders(res);
+                return res;
             } else {
                 json error = {
                     {"success", false},
                     {"error", "Impossible de démarrer la simulation"}
                 };
-                return addCORS(crow::response(404, error.dump()));
+                crow::response res(404, error.dump());
+                addCORSHeaders(res);
+                return res;
             }
         });
         
@@ -144,13 +170,17 @@ public:
                     {"success", true},
                     {"message", "Simulation mise en pause"}
                 };
-                return addCORS(crow::response(200, response.dump()));
+                crow::response res(200, response.dump());
+                addCORSHeaders(res);
+                return res;
             } else {
                 json error = {
                     {"success", false},
                     {"error", "Simulation non trouvée"}
                 };
-                return addCORS(crow::response(404, error.dump()));
+                crow::response res(404, error.dump());
+                addCORSHeaders(res);
+                return res;
             }
         });
         
@@ -163,13 +193,17 @@ public:
                     {"success", true},
                     {"message", "Simulation reprise"}
                 };
-                return addCORS(crow::response(200, response.dump()));
+                crow::response res(200, response.dump());
+                addCORSHeaders(res);
+                return res;
             } else {
                 json error = {
                     {"success", false},
                     {"error", "Simulation non trouvée"}
                 };
-                return addCORS(crow::response(404, error.dump()));
+                crow::response res(404, error.dump());
+                addCORSHeaders(res);
+                return res;
             }
         });
         
@@ -182,13 +216,17 @@ public:
                     {"success", true},
                     {"message", "Simulation arrêtée"}
                 };
-                return addCORS(crow::response(200, response.dump()));
+                crow::response res(200, response.dump());
+                addCORSHeaders(res);
+                return res;
             } else {
                 json error = {
                     {"success", false},
                     {"error", "Simulation non trouvée"}
                 };
-                return addCORS(crow::response(404, error.dump()));
+                crow::response res(404, error.dump());
+                addCORSHeaders(res);
+                return res;
             }
         });
         
@@ -201,11 +239,15 @@ public:
                     {"success", false},
                     {"error", "Simulation non trouvée"}
                 };
-                return addCORS(crow::response(404, error.dump()));
+                crow::response res(404, error.dump());
+                addCORSHeaders(res);
+                return res;
             }
             
             json response = sim->getEtatActuel();
-            return addCORS(crow::response(200, response.dump()));
+            crow::response res(200, response.dump());
+            addCORSHeaders(res);
+            return res;
         });
         
         // GET /api/simulation/<id>/stats - Statistiques
@@ -217,11 +259,15 @@ public:
                     {"success", false},
                     {"error", "Simulation non trouvée"}
                 };
-                return addCORS(crow::response(404, error.dump()));
+                crow::response res(404, error.dump());
+                addCORSHeaders(res);
+                return res;
             }
             
             json response = sim->getStatistiques();
-            return addCORS(crow::response(200, response.dump()));
+            crow::response res(200, response.dump());
+            addCORSHeaders(res);
+            return res;
         });
         
         // GET /api/simulation/<id>/events - Derniers événements
@@ -233,11 +279,15 @@ public:
                     {"success", false},
                     {"error", "Simulation non trouvée"}
                 };
-                return addCORS(crow::response(404, error.dump()));
+                crow::response res(404, error.dump());
+                addCORSHeaders(res);
+                return res;
             }
             
             json response = sim->getEvenements();
-            return addCORS(crow::response(200, response.dump()));
+            crow::response res(200, response.dump());
+            addCORSHeaders(res);
+            return res;
         });
         
         // GET /api/simulations - Lister toutes les simulations
@@ -248,7 +298,9 @@ public:
                 {"simulations", ids},
                 {"count", ids.size()}
             };
-            return addCORS(crow::response(200, response.dump()));
+            crow::response res(200, response.dump());
+            addCORSHeaders(res);
+            return res;
         });
         
         // DELETE /api/simulation/<id> - Supprimer une simulation
@@ -260,13 +312,17 @@ public:
                     {"success", true},
                     {"message", "Simulation supprimée"}
                 };
-                return addCORS(crow::response(200, response.dump()));
+                crow::response res(200, response.dump());
+                addCORSHeaders(res);
+                return res;
             } else {
                 json error = {
                     {"success", false},
                     {"error", "Simulation non trouvée"}
                 };
-                return addCORS(crow::response(404, error.dump()));
+                crow::response res(404, error.dump());
+                addCORSHeaders(res);
+                return res;
             }
         });
     }
