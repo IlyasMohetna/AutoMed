@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
+import { Activity, Plus, AlertCircle, ServerCrash } from "lucide-react";
 import ApiService from "./services/ApiService";
-import Header from "./components/Header";
-import ConnectionAlert from "./components/ConnectionAlert";
-import SimulationsHeader from "./components/SimulationsHeader";
-import EmptyState from "./components/EmptyState";
-import SimulationsList from "./components/SimulationsList";
+import SimulationCard from "./components/SimulationCard";
 import SimulationForm from "./components/SimulationForm";
-import SimulationDetails from "./components/SimulationDetails";
-import Modal from "./components/ui/Modal";
-import Notification from "./components/ui/Notification";
+import SimulationLargeView from "./components/SimulationLargeView";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import "./index.css";
 
 function App() {
@@ -17,8 +16,7 @@ function App() {
   const [simulations, setSimulations] = useState([]);
   const [simulationStatuses, setSimulationStatuses] = useState({});
   const [showForm, setShowForm] = useState(false);
-  const [selectedSimulation, setSelectedSimulation] = useState(null);
-  const [notification, setNotification] = useState(null);
+  const [largeViewSimulation, setLargeViewSimulation] = useState(null);
 
   useEffect(() => {
     checkHealth();
@@ -75,62 +73,51 @@ function App() {
     setSimulationStatuses(statuses);
   };
 
-  const showNotification = (message, type = "success") => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 5000);
-  };
-
   const handleCreateSimulation = async (config) => {
     try {
       const result = await ApiService.createSimulation(config);
-      showNotification(
-        `Simulation #${result.simulationId} créée avec succès`,
-        "success"
-      );
       setShowForm(false);
       loadSimulations();
     } catch (error) {
-      showNotification("Erreur lors de la création de la simulation", "error");
+      console.error("Error creating simulation:", error);
     }
   };
 
   const handleStartSimulation = async (simId) => {
     try {
       await ApiService.startSimulation(simId);
-      showNotification(`Simulation #${simId} démarrée`, "success");
+      setLargeViewSimulation(simId);
       loadSimulations();
     } catch (error) {
-      showNotification(`Erreur lors du démarrage`, "error");
+      console.error("Error starting simulation:", error);
     }
   };
 
   const handlePauseSimulation = async (simId) => {
     try {
       await ApiService.pauseSimulation(simId);
-      showNotification(`Simulation #${simId} mise en pause`, "success");
       loadSimulations();
     } catch (error) {
-      showNotification(`Erreur lors de la mise en pause`, "error");
+      console.error("Error pausing simulation:", error);
     }
   };
 
   const handleResumeSimulation = async (simId) => {
     try {
       await ApiService.resumeSimulation(simId);
-      showNotification(`Simulation #${simId} reprise`, "success");
       loadSimulations();
     } catch (error) {
-      showNotification(`Erreur lors de la reprise`, "error");
+      console.error("Error resuming simulation:", error);
     }
   };
 
   const handleStopSimulation = async (simId) => {
     try {
       await ApiService.stopSimulation(simId);
-      showNotification(`Simulation #${simId} arrêtée`, "success");
+      setLargeViewSimulation(null);
       loadSimulations();
     } catch (error) {
-      showNotification(`Erreur lors de l'arrêt`, "error");
+      console.error("Error stopping simulation:", error);
     }
   };
 
@@ -140,83 +127,128 @@ function App() {
     }
     try {
       await ApiService.deleteSimulation(simId);
-      showNotification(`Simulation #${simId} supprimée`, "success");
       loadSimulations();
     } catch (error) {
-      showNotification(`Erreur lors de la suppression`, "error");
+      console.error("Error deleting simulation:", error);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <Header connected={connected} serverInfo={serverInfo} />
-
-      <Notification
-        message={notification?.message}
-        type={notification?.type}
-        onClose={() => setNotification(null)}
+  if (largeViewSimulation) {
+    return (
+      <SimulationLargeView
+        simulationId={largeViewSimulation}
+        onClose={() => setLargeViewSimulation(null)}
+        onPause={handlePauseSimulation}
+        onResume={handleResumeSimulation}
+        onStop={handleStopSimulation}
       />
+    );
+  }
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {!connected && <ConnectionAlert />}
-
-        {connected && (
-          <>
-            <SimulationsHeader
-              simulationsCount={simulations.length}
-              onCreateClick={() => setShowForm(true)}
-            />
-
-            {simulations.length === 0 && !showForm && (
-              <EmptyState onCreateClick={() => setShowForm(true)} />
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Modern Header */}
+      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <Activity className="h-6 w-6 text-primary" />
+            <div>
+              <h1 className="text-xl font-bold">AutoMed</h1>
+              <p className="text-xs text-muted-foreground">Bloc Opératoire</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-500 animate-pulse" : "bg-destructive"}`} />
+              <span className="text-sm font-medium">
+                {connected ? "Connecté" : "Déconnecté"}
+              </span>
+            </div>
+            {serverInfo && (
+              <Badge variant="outline" className="hidden md:flex">
+                v{serverInfo.version}
+              </Badge>
             )}
+          </div>
+        </div>
+      </header>
 
-            {simulations.length > 0 && (
-              <SimulationsList
-                simulations={simulations}
-                simulationStatuses={simulationStatuses}
-                onStart={handleStartSimulation}
-                onPause={handlePauseSimulation}
-                onResume={handleResumeSimulation}
-                onStop={handleStopSimulation}
-                onDelete={handleDeleteSimulation}
-                onView={(id) => setSelectedSimulation(id)}
-              />
+      {/* Main Content */}
+      <main className="container px-4 py-8">
+        {!connected ? (
+          <Card className="border-destructive">
+            <CardContent className="flex items-center gap-4 p-6">
+              <ServerCrash className="h-12 w-12 text-destructive" />
+              <div>
+                <h3 className="font-semibold text-lg">Serveur Non Connecté</h3>
+                <p className="text-sm text-muted-foreground">
+                  En attente de connexion au backend AutoMed...
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* Header Section */}
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-bold tracking-tight">Simulations</h2>
+                <p className="text-muted-foreground mt-1">
+                  {simulations.length} simulation{simulations.length !== 1 ? "s" : ""} active{simulations.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+              <Button onClick={() => setShowForm(true)} size="lg">
+                <Plus className="h-5 w-5 mr-2" />
+                Nouvelle Simulation
+              </Button>
+            </div>
+
+            {/* Empty State */}
+            {simulations.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+                  <AlertCircle className="h-16 w-16 text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Aucune Simulation</h3>
+                  <p className="text-muted-foreground mb-6 max-w-sm">
+                    Commencez par créer votre première simulation pour surveiller les blocs opératoires
+                  </p>
+                  <Button onClick={() => setShowForm(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Créer une Simulation
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {simulations.map((simId) => (
+                  <SimulationCard
+                    key={simId}
+                    simulation={simId}
+                    status={simulationStatuses[simId]}
+                    onStart={handleStartSimulation}
+                    onPause={handlePauseSimulation}
+                    onResume={handleResumeSimulation}
+                    onStop={handleStopSimulation}
+                    onDelete={handleDeleteSimulation}
+                    onViewLarge={setLargeViewSimulation}
+                  />
+                ))}
+              </div>
             )}
           </>
         )}
       </main>
 
-      <Modal
-        isOpen={showForm}
-        onClose={() => setShowForm(false)}
-        size="lg"
-      >
-        <SimulationForm
-          onSimulationCreated={handleCreateSimulation}
-          onCancel={() => setShowForm(false)}
-        />
-      </Modal>
-
-      {selectedSimulation && (
-        <SimulationDetails
-          simulationId={selectedSimulation}
-          onClose={() => setSelectedSimulation(null)}
-        />
-      )}
-
-      <footer className="bg-white border-t border-gray-200 mt-12 py-6">
-        <div className="max-w-7xl mx-auto px-4 text-center text-gray-600 text-sm">
-          <p>
-            <span className="font-semibold">AutoMed</span> - Simulateur de Blocs
-            Opératoires avec C++ Backend
-          </p>
-          <p className="mt-1">
-            Backend: {serverInfo?.type || "REST API"} • Frontend: React + Vite +
-            Tailwind CSS
-          </p>
-        </div>
-      </footer>
+      {/* Create Simulation Dialog */}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <SimulationForm
+            onSimulationCreated={handleCreateSimulation}
+            onCancel={() => setShowForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

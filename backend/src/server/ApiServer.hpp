@@ -284,7 +284,53 @@ public:
                 return res;
             }
             
-            json response = sim->getEvenements();
+            auto eventsData = sim->getEvenements();
+            json eventsArray = json::array();
+            
+            // Enrichir chaque événement avec une description lisible
+            for (const auto& evt : eventsData["events"]) {
+                json enrichedEvt = evt;
+                std::string description = "";
+                std::string type = evt["type"];
+                auto meta = evt["metadata"];
+                
+                if (type == "ARRIVEE_PATIENT" && meta.contains("patient")) {
+                    description = "Patient " + meta["patient"]["nom"].get<std::string>() + 
+                                  " (" + meta["patient"]["priorite"].get<std::string>() + ") " +
+                                  "arrivé pour " + meta["patient"]["typeOperation"].get<std::string>() +
+                                  " (durée estimée: " + std::to_string(meta["patient"]["dureeEstimee"].get<int>()) + "min)";
+                } else if (type == "DEBUT_OPERATION" && meta.contains("patient") && meta.contains("bloc") && meta.contains("equipe")) {
+                    description = "Opération démarrée - Patient: " + meta["patient"]["nom"].get<std::string>() +
+                                  " | " + meta["bloc"]["nom"].get<std::string>() +
+                                  " | " + meta["equipe"]["nom"].get<std::string>() +
+                                  " | Type: " + meta["patient"]["typeOperation"].get<std::string>();
+                } else if (type == "FIN_OPERATION" && meta.contains("patient") && meta.contains("bloc")) {
+                    description = "Opération terminée - Patient: " + meta["patient"]["nom"].get<std::string>() +
+                                  " | " + meta["bloc"]["nom"].get<std::string>() +
+                                  " | Durée réelle: " + std::to_string(meta["patient"]["dureeReelle"].get<int>()) + "min";
+                } else if (type == "FIN_NETTOYAGE_BLOC" && meta.contains("bloc")) {
+                    description = "Nettoyage terminé - " + meta["bloc"]["nom"].get<std::string>() + " disponible";
+                } else if (type == "ENTREE_SALLE_REVEIL" && meta.contains("patient")) {
+                    description = "Patient " + meta["patient"]["nom"].get<std::string>() + " transféré en salle de réveil";
+                } else if (type == "SORTIE_SALLE_REVEIL" && meta.contains("patient")) {
+                    description = "Patient " + meta["patient"]["nom"].get<std::string>() + " sorti de l'hôpital";
+                } else if (type == "FIN_SIMULATION") {
+                    description = "Simulation terminée";
+                } else {
+                    description = type;
+                }
+                
+                enrichedEvt["description"] = description;
+                enrichedEvt["timestamp"] = meta.contains("tempsSimulation") ? meta["tempsSimulation"].get<int>() : 0;
+                eventsArray.push_back(enrichedEvt);
+            }
+            
+            json response = {
+                {"simulationId", simId},
+                {"events", eventsArray},
+                {"count", eventsArray.size()}
+            };
+            
             crow::response res(200, response.dump());
             addCORSHeaders(res);
             return res;

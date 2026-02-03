@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { Save, X } from "lucide-react";
+import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import FormInput from "./form/FormInput";
 import FormSelect from "./form/FormSelect";
 import SpeedSelector from "./form/SpeedSelector";
 import ResourcesSection from "./form/ResourcesSection";
 import PatientsSection from "./form/PatientsSection";
-import Button from "./ui/Button";
 
 const SimulationForm = ({ onSimulationCreated, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -56,25 +59,15 @@ const SimulationForm = ({ onSimulationCreated, onCancel }) => {
   ];
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-slate-200">
-      <div className="flex items-center justify-between p-6 border-b border-slate-200">
-        <h2 className="text-2xl font-semibold text-slate-900">
-          Nouvelle Simulation
-        </h2>
-        {onCancel && (
-          <button
-            onClick={onCancel}
-            className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg w-8 h-8 flex items-center justify-center transition-colors duration-200"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        )}
-      </div>
+    <>
+      <DialogHeader>
+        <DialogTitle>Nouvelle Simulation</DialogTitle>
+        <DialogDescription>
+          Configurez les paramètres de votre simulation de bloc opératoire
+        </DialogDescription>
+      </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
-        {/* Nom de la simulation */}
+      <form onSubmit={handleSubmit} className="space-y-6 py-4">
         <FormInput
           label="Nom de la Simulation"
           name="nom"
@@ -84,7 +77,6 @@ const SimulationForm = ({ onSimulationCreated, onCancel }) => {
           required
         />
 
-        {/* Configuration Temps et Algorithme */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormInput
             label="Durée (minutes)"
@@ -104,43 +96,33 @@ const SimulationForm = ({ onSimulationCreated, onCancel }) => {
           />
         </div>
 
-        {/* Vitesse de simulation */}
         <SpeedSelector
           value={formData.facteurVitesse}
           onChange={handleSpeedChange}
         />
 
-        {/* Ressources Hospitalières */}
         <ResourcesSection formData={formData} onChange={handleChange} />
 
-        {/* Patients */}
         <PatientsSection formData={formData} onChange={handleChange} />
 
-        {/* Boutons d'action */}
-        <div className="flex gap-3 pt-4 border-t border-slate-200">
-          {onCancel && (
-            <Button
-              type="button"
-              onClick={onCancel}
-              variant="secondary"
-              size="lg"
-              className="flex-1"
-            >
-              Annuler
-            </Button>
-          )}
+        <DialogFooter className="gap-2">
+          <Button
+            type="button"
+            onClick={onCancel}
+            variant="outline"
+          >
+            Annuler
+          </Button>
           <Button
             type="submit"
-            variant="primary"
-            size="lg"
-            loading={isSubmitting}
-            className="flex-1"
+            disabled={isSubmitting}
           >
+            <Save className="h-4 w-4 mr-2" />
             Créer la Simulation
           </Button>
-        </div>
+        </DialogFooter>
       </form>
-    </div>
+    </>
   );
 };
 

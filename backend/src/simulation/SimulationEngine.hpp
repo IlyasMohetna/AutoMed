@@ -253,8 +253,12 @@ public:
         // Afficher l'événement
         std::cout << "[" << getTempsEcouleMinutes() << "min] " << evt.toString() << std::endl;
         
+        // Enrichir l'événement avec les métadonnées avant de le sauvegarder
+        Evenement enrichedEvt = evt;
+        enrichirEvenement(enrichedEvt);
+        
         // Sauvegarder dans l'historique
-        ajouterAHistorique(evt);
+        ajouterAHistorique(enrichedEvt);
         
         // Traiter l'événement
         traiterEvenement(evt);
@@ -517,6 +521,55 @@ private:
     }
 
     /**
+     * Enrichit un événement avec les métadonnées détaillées
+     */
+    void enrichirEvenement(Evenement& evt) {
+        nlohmann::json meta = nlohmann::json::object();
+        
+        // Ajouter les informations du patient
+        if (evt.patientId >= 0 && tousLesPatients.count(evt.patientId) > 0) {
+            Patient* patient = tousLesPatients[evt.patientId];
+            meta["patient"] = {
+                {"id", patient->getId()},
+                {"nom", patient->getNomComplet()},
+                {"priorite", prioriteToString(patient->getPriorite())},
+                {"typeOperation", typeOperationToString(patient->getTypeOperation())},
+                {"dureeEstimee", patient->getDureeEstimeeMinutes()},
+                {"dureeReelle", patient->getDureeReelleMinutes()}
+            };
+        }
+        
+        // Ajouter les informations du bloc
+        if (evt.blocOperatoireId >= 0) {
+            BlocOperatoire* bloc = trouverBloc(evt.blocOperatoireId);
+            if (bloc) {
+                meta["bloc"] = {
+                    {"id", bloc->getId()},
+                    {"nom", bloc->getNom()},
+                    {"etat", etatBlocToString(bloc->getEtat())}
+                };
+            }
+        }
+        
+        // Ajouter les informations de l'équipe
+        if (evt.equipeId >= 0) {
+            EquipeMedicale* equipe = trouverEquipe(evt.equipeId);
+            if (equipe) {
+                meta["equipe"] = {
+                    {"id", equipe->getId()},
+                    {"nom", equipe->getNom()},
+                    {"disponible", equipe->estDisponible()}
+                };
+            }
+        }
+        
+        // Ajouter le temps de simulation
+        meta["tempsSimulation"] = getTempsEcouleMinutes();
+        
+        evt.metadata = meta;
+    }
+
+    /**
      * Crée une équipe médicale complète
      */
     void creerEquipeMedicale(int equipeId) {
@@ -562,6 +615,18 @@ private:
         for (auto* bloc : blocsOperatoires) {
             if (bloc && bloc->getId() == blocId) {
                 return bloc;
+            }
+        }
+        return nullptr;
+    }
+
+    /**
+     * Trouve une équipe médicale par ID
+     */
+    EquipeMedicale* trouverEquipe(int equipeId) {
+        for (auto* equipe : equipesDisponibles) {
+            if (equipe && equipe->getId() == equipeId) {
+                return equipe;
             }
         }
         return nullptr;
