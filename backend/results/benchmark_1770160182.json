@@ -1,0 +1,83 @@
+{
+    "benchmark": {
+        "algorithmes_testes": 3,
+        "timestamp": 1770160182
+    },
+    "resultats": [
+        {
+            "algorithme": "FCFS",
+            "debitPatients": 0.375,
+            "dureeOperationMoyenne": 146.66666666666666,
+            "nombrePatientsTotal": 5,
+            "nombrePatientsTraites": 3,
+            "parPriorite": {
+                "ambulatoires": {
+                    "nombre": 0,
+                    "tempsAttenteMoyen": 0.0
+                },
+                "electifs": {
+                    "nombre": 5,
+                    "tempsAttenteMoyen": 0.0
+                },
+                "urgences": {
+                    "nombre": 0,
+                    "tempsAttenteMoyen": 0.0
+                }
+            },
+            "score": 400.0,
+            "tauxTraitement": 60.0,
+            "tempsAttenteMax": 0,
+            "tempsAttenteMoyen": 0.0
+        },
+        {
+            "algorithme": "SJF",
+            "debitPatients": 0.375,
+            "dureeOperationMoyenne": 125.25,
+            "nombrePatientsTotal": 5,
+            "nombrePatientsTraites": 3,
+            "parPriorite": {
+                "ambulatoires": {
+                    "nombre": 0,
+                    "tempsAttenteMoyen": 0.0
+                },
+                "electifs": {
+                    "nombre": 5,
+                    "tempsAttenteMoyen": 0.0
+                },
+                "urgences": {
+                    "nombre": 0,
+                    "tempsAttenteMoyen": 0.0
+                }
+            },
+            "score": 400.0,
+            "tauxTraitement": 60.0,
+            "tempsAttenteMax": 0,
+            "tempsAttenteMoyen": 0.0
+        },
+        {
+            "algorithme": "PRIORITE",
+            "debitPatients": 0.5,
+            "dureeOperationMoyenne": 88.5,
+            "nombrePatientsTotal": 5,
+            "nombrePatientsTraites": 4,
+            "parPriorite": {
+                "ambulatoires": {
+                    "nombre": 0,
+                    "tempsAttenteMoyen": 0.0
+                },
+                "electifs": {
+                    "nombre": 5,
+                    "tempsAttenteMoyen": 0.0
+                },
+                "urgences": {
+                    "nombre": 0,
+                    "tempsAttenteMoyen": 0.0
+                }
+            },
+            "score": 199.99999999999994,
+            "tauxTraitement": 80.0,
+            "tempsAttenteMax": 0,
+            "tempsAttenteMoyen": 0.0
+        }
+    ]
+}

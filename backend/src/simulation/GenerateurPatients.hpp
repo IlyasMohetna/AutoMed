@@ -103,10 +103,9 @@ public:
         for (int i = 0; i < nombrePatientsElectifs; i++) {
             Patient* patient = genererPatientElectif();
             
-            // Ajuster l'horodatage d'arrivée
+            // Ajuster l'horodatage d'arrivée avec le temps virtuel
             time_t heureArrivee = dateDebut + (i * intervalle * 60);
-            // Note: On ne peut pas modifier directement horodatageArrivee car il est privé
-            // Il faudra créer le patient avec le bon timestamp ou ajouter un setter
+            patient->setHorodatageArrivee(heureArrivee);
             
             patients.push_back(patient);
         }

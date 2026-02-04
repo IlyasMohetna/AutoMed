@@ -78,21 +78,22 @@ public:
     void setPriorite(PrioritePatient newPriorite) { priorite = newPriorite; }
     void setTypeOperation(TypeOperation newType) { typeOperation = newType; }
     void setDureeEstimeeMinutes(int duree) { dureeEstimeeMinutes = duree; }
+    void setHorodatageArrivee(time_t timestamp) { horodatageArrivee = timestamp; }
     void setHorodatageDebutOperation(time_t timestamp) { horodatageDebutOperation = timestamp; }
     void setHorodatageFinOperation(time_t timestamp) { horodatageFinOperation = timestamp; }
 
     /**
-     * Marque le début de l'opération
+     * Marque le début de l'opération avec le temps virtuel
      */
-    void commencerOperation() {
-        horodatageDebutOperation = std::time(nullptr);
+    void commencerOperation(time_t tempsVirtuel = 0) {
+        horodatageDebutOperation = (tempsVirtuel > 0) ? tempsVirtuel : std::time(nullptr);
     }
 
     /**
-     * Marque la fin de l'opération
+     * Marque la fin de l'opération avec le temps virtuel
      */
-    void terminerOperation() {
-        horodatageFinOperation = std::time(nullptr);
+    void terminerOperation(time_t tempsVirtuel = 0) {
+        horodatageFinOperation = (tempsVirtuel > 0) ? tempsVirtuel : std::time(nullptr);
     }
 
     /**

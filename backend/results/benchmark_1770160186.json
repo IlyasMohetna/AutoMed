@@ -1,0 +1,83 @@
+{
+    "benchmark": {
+        "algorithmes_testes": 3,
+        "timestamp": 1770160186
+    },
+    "resultats": [
+        {
+            "algorithme": "FCFS",
+            "debitPatients": 0.625,
+            "dureeOperationMoyenne": 115.2,
+            "nombrePatientsTotal": 15,
+            "nombrePatientsTraites": 5,
+            "parPriorite": {
+                "ambulatoires": {
+                    "nombre": 0,
+                    "tempsAttenteMoyen": 0.0
+                },
+                "electifs": {
+                    "nombre": 15,
+                    "tempsAttenteMoyen": 86.71428571428571
+                },
+                "urgences": {
+                    "nombre": 0,
+                    "tempsAttenteMoyen": 0.0
+                }
+            },
+            "score": 796.7380952380953,
+            "tauxTraitement": 33.33333333333333,
+            "tempsAttenteMax": 170,
+            "tempsAttenteMoyen": 86.71428571428571
+        },
+        {
+            "algorithme": "SJF",
+            "debitPatients": 0.75,
+            "dureeOperationMoyenne": 114.33333333333333,
+            "nombrePatientsTotal": 15,
+            "nombrePatientsTraites": 6,
+            "parPriorite": {
+                "ambulatoires": {
+                    "nombre": 0,
+                    "tempsAttenteMoyen": 0.0
+                },
+                "electifs": {
+                    "nombre": 15,
+                    "tempsAttenteMoyen": 55.875
+                },
+                "urgences": {
+                    "nombre": 0,
+                    "tempsAttenteMoyen": 0.0
+                }
+            },
+            "score": 683.8125,
+            "tauxTraitement": 40.0,
+            "tempsAttenteMax": 188,
+            "tempsAttenteMoyen": 55.875
+        },
+        {
+            "algorithme": "PRIORITE",
+            "debitPatients": 0.375,
+            "dureeOperationMoyenne": 161.0,
+            "nombrePatientsTotal": 15,
+            "nombrePatientsTraites": 3,
+            "parPriorite": {
+                "ambulatoires": {
+                    "nombre": 0,
+                    "tempsAttenteMoyen": 0.0
+                },
+                "electifs": {
+                    "nombre": 15,
+                    "tempsAttenteMoyen": 132.85714285714286
+                },
+                "urgences": {
+                    "nombre": 0,
+                    "tempsAttenteMoyen": 0.0
+                }
+            },
+            "score": 999.2857142857142,
+            "tauxTraitement": 20.0,
+            "tempsAttenteMax": 285,
+            "tempsAttenteMoyen": 132.85714285714286
+        }
+    ]
+}

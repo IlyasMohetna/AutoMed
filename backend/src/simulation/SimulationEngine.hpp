@@ -415,7 +415,7 @@ private:
     void demarrerOperation(BlocOperatoire* bloc, Patient* patient, EquipeMedicale* equipe) {
         if (!bloc || !patient || !equipe) return;
         
-        bloc->commencerOperation(patient, equipe);
+        bloc->commencerOperation(patient, equipe, tempsSimulation);
         stats->enregistrerDebutOperation(patient);
         
         std::cout << "    → Opération démarrée: " << patient->getNomComplet()
@@ -440,7 +440,7 @@ private:
         if (!bloc) return;
         
         Patient* patient = bloc->getPatientActuel();
-        bloc->terminerOperation();
+        bloc->terminerOperation(tempsSimulation);
         
         if (patient) {
             stats->enregistrerFinOperation(patient);
@@ -493,6 +493,8 @@ private:
         
         // Créer le patient urgence
         Patient* patient = generateur->genererPatientUrgence();
+        // Définir son horodatage d'arrivée avec le temps virtuel
+        patient->setHorodatageArrivee(prochainTimestamp);
         tousLesPatients[patient->getId()] = patient;
         
         // Planifier son arrivée

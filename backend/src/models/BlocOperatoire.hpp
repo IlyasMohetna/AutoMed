@@ -76,9 +76,9 @@ public:
     }
 
     /**
-     * Commence une opération
+     * Commence une opération avec le temps virtuel
      */
-    bool commencerOperation(Patient* patient, EquipeMedicale* equipe) {
+    bool commencerOperation(Patient* patient, EquipeMedicale* equipe, time_t tempsVirtuel = 0) {
         if (!estDisponible() || !patient || !equipe) {
             return false;
         }
@@ -86,11 +86,11 @@ public:
         patientActuel = patient;
         equipeAssignee = equipe;
         etat = EtatBlocOperatoire::OCCUPE;
-        horodatageDebutOperation = std::time(nullptr);
+        horodatageDebutOperation = (tempsVirtuel > 0) ? tempsVirtuel : std::time(nullptr);
         horodatageFinOperation = 0;
 
-        // Marquer le patient comme en opération
-        patient->commencerOperation();
+        // Marquer le patient comme en opération avec le temps virtuel
+        patient->commencerOperation(tempsVirtuel);
         
         // Réserver l'équipe
         equipe->reserver();
@@ -99,17 +99,17 @@ public:
     }
 
     /**
-     * Termine l'opération en cours
+     * Termine l'opération en cours avec le temps virtuel
      */
-    bool terminerOperation() {
+    bool terminerOperation(time_t tempsVirtuel = 0) {
         if (!estOccupe() || !patientActuel) {
             return false;
         }
 
-        horodatageFinOperation = std::time(nullptr);
+        horodatageFinOperation = (tempsVirtuel > 0) ? tempsVirtuel : std::time(nullptr);
         
-        // Marquer le patient comme opération terminée
-        patientActuel->terminerOperation();
+        // Marquer le patient comme opération terminée avec le temps virtuel
+        patientActuel->terminerOperation(tempsVirtuel);
         
         // On garde les références pour l'historique mais on change l'état
         etat = EtatBlocOperatoire::NETTOYAGE;
